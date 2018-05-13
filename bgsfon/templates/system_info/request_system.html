@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  <h1>{% block title %}Get System Info{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+
+<div ng-app="systemInfo" ng-controller="factionList">
+<form method="post" id="systeminfo" ng-submit="submit()">
+  <label for="System">System</label>
+  <input name="star_system" ng-model="star_system" required><input type="submit" value="Search">
+</form>
+<table>
+<tr><th>Faction</th><th>State</th></tr></tr>
+<tr ng-repeat="faction in factions">
+
+    {% raw %}
+    <td>{{faction.faction}}</td>
+    <td>{{faction.state}}</td>
+    {% endraw %}
+</tr>
+</table>
+</div>
+<script>
+var app = angular.module('systemInfo', []);
+app.controller('factionList', function($scope, $http) {
+	  $scope.submit = function() {
+    	$http.post("system_controller",$scope.star_system)
+        .then(function (response) {
+          $scope.factions = response.data.records;
+          $scope.factions = [{"faction": "Fathers of Nontime", "state": "Boom"}]
+        });
+    };
+});
+
+</script>
+{% endblock %}
