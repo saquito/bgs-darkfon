@@ -28,8 +28,8 @@ def create_app(test_config=None):
     #return ",".join([faction.name for faction in s.get_current_factions()])
     return 'Hello, World!'
 
-  from . import system_info
-  app.register_blueprint(system_info.bp)
+  from . import query
+  app.register_blueprint(query.bp)
   from . import db
   db.init_app(app)
 

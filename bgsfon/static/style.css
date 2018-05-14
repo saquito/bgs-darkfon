@@ -24,12 +24,13 @@ nav ul li a, nav ul li span, header .action { display: block; padding: 0.5rem; }
 .content textarea { min-height: 12em; resize: vertical; }
 
 table { border:solid;border-width:1px;border-color:orange;border-collapse: collapse}
-table th { border:solid;border-width:1px;border-color:orange;padding:5px;background-color: orange;color:red}
+table th { border:solid;border-width:1px;border-color:orange;padding:5px;background-color: orange;color:#ffffff;}
 table td { border:solid;border-width:1px;border-color:orange;padding:5px}
 
 input.danger { color: #cc2f2e; }
 input[id=star_system] {
   width: 15em;
+  font-family: "Euro Caps";
 }
 input[type=submit] { 
   color: orange;

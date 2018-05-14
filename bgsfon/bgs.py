@@ -8,7 +8,10 @@ import sys
 import shutil
 from collections import defaultdict
 import itertools
-from . import db
+try:
+  from . import db
+except:
+  pass
 
 
 EXPANSION_RADIUS = 27.5
@@ -83,6 +86,7 @@ def fill_factions_from_system(systemName, local = False):
     return None
   for faction in data_factions['factions']:
     if not fetch_faction(faction['name']):
+      print(faction["name"])
       values = [faction['name'],faction['allegiance'],faction['government'],faction['isPlayer'], None]
       c.execute("INSERT INTO Factions VALUES (?,?,?,?,?)",values)
   conn.commit()    
@@ -207,7 +211,7 @@ def get_todays_tick_time(cur_time = None):
   todays_tick_time = " ".join((day_time,TICK_TIME))
   return get_epoch_from_utc_time(todays_tick_time)
 
-def is_update_needed(cur_time = None):
+def is_update_needed(conn,cur_time = None):
   current_time = time.time()
   if cur_time:
     if isinstance(cur_time,str):
@@ -217,7 +221,7 @@ def is_update_needed(cur_time = None):
     else:
       print("DATE FORMAT ERROR")
       return False
-  last_update_time = get_last_update()
+  last_update_time = get_last_update(conn)
   todays_tick_time = get_todays_tick_time(current_time)
   current_tick_time = get_current_tick_time(current_time)
   next_tick_time = get_next_tick_time(current_time)
@@ -272,6 +276,7 @@ def get_last_update(c):
   last_update = c.execute("SELECT MAX(timestamp) FROM ticks").fetchone()[0]
   if not last_update:
     last_update = 0
+
   return last_update
 
 def update_system(systemName, local = False):
@@ -288,11 +293,10 @@ def update_state_entry(timestamp,state_name,state_type,faction_name, system_name
   c.execute("INSERT INTO faction_system_state VALUES",values)
   c.commit()
 
-def update_tick(cur_time = None, local = False, history = False):
-  conn = get_db_connection()
+def update_tick(conn,cur_time = None, local = False, history = False):
   current_time = get_timestamp(cur_time)
   c = conn.cursor()
-  if not is_update_needed(current_time):
+  if not is_update_needed(conn,current_time) and not history:
     debug("UPDATE NOT NEEDED")
     return False
   else:
@@ -453,30 +457,20 @@ def get_all_entries():
 
 
 class Faction:
-  def __init__(self,faction_name):
-    conn = get_db_connection()
+  def __init__(self,conn,faction_name):
     c = conn.cursor()
     self.name = faction_name
     self.ok = False
     self.json = ""
-    if 1:
-      c.execute('SELECT allegiance,government,is_player,native_system FROM Factions WHERE faction_name = "{0}"'.format(faction_name))
-      try:
-        self.allegiance, self.government, self.is_player, self.native_system = c.fetchone()
-        c.execute('SELECT state_name FROM faction_system_state WHERE faction_name = "{0}" AND date = {1} AND state_type="activeState"'.format(self.name,get_last_update()))
-        state_data = c.fetchone()
-        if not state_data:
-          c.execute('SELECT date,state_name FROM faction_system_state WHERE faction_name = "{0}" AND state_type="activeState"'.format(self.name))
-          self.state = max(c.fetchall(),key=lambda x: x[0])[1]
-        else:
-          self.state = state_data[0]
-        self.ok = True
-      except:
-        self.ok = False
-#    except:
-#      None
+    c.execute('SELECT allegiance,government,is_player,native_system FROM Factions WHERE faction_name = "{0}"'.format(faction_name))
+    try:
+      self.allegiance, self.government, self.is_player, self.native_system = c.fetchone()
+      self.ok = True
+    except:
+      self.ok = False
     if self.ok:
-      self.json = {"name":self.name,"allegiance":self.allegiance,"government":self.government,"isPlayer":self.is_player,"native_system":self.native_system,"state":self.state}
+      self.json = {"name":self.name,"allegiance":self.allegiance,"government":self.government,"isPlayer":self.is_player,"native_system":self.native_system}
+    print(faction_name,"OK:",self.ok)
   def __repr__(self):
     return str(self.json)
 
@@ -517,6 +511,15 @@ class Faction:
           risked.append([system_name,influence])
       return(risked)
   
+  def get_expansion_risk_system(self,system,threshold = EXPANSION_THRESHOLD):
+    systems = self.get_systems()
+    risked = []
+    if systems:
+      for system_name in systems:     
+        influence = self.get_status_in_system(system_name).popitem()[1]['status']['influence']
+        if influence > threshold:
+          risked.append([system_name,influence])
+      return(risked)
   
   def get_systems(self, start_timestamp = None, end_timestamp = None):
     if not self.ok:
@@ -536,17 +539,15 @@ class Faction:
     systems = [system[0] for system in c.fetchall() ]
     return(systems)
   
-  def get_current_influence_in_system(self,system_requested):
+  def get_current_influence_in_system(self,conn, system_requested):
     if not self.ok:
       return None
     if isinstance(system_requested,System):
       system_requested = system_requested.name
-    conn = get_db_connection()
     c = conn.cursor()
-    c.execute('SELECT influence FROM faction_system WHERE system = "{0}" AND name = "{1}" and date = {2}'.format(system_requested,self.name,get_last_update()))  
+    c.execute('SELECT influence FROM faction_system WHERE system = "{0}" AND name = "{1}" and date = {2}'.format(system_requested,self.name,get_last_update(c)))  
     influence_data = c.fetchone()
-    if len(influence_data) > 0:
-#      print("{0} has {1:.2f}% influence in system {2}".format(self.name,influence_data[0]*100.0,system_requested)) 
+    if len(influence_data) > 0: 
       return influence_data[0]
     return None
   
@@ -565,6 +566,17 @@ class Faction:
     c = conn.cursor()
     c.execute('SELECT DISTINCT state_name, trend FROM faction_system_state WHERE faction_name = "{0}" AND date ={1} AND state_type="recoveringState"'.format(self.name,get_last_update()))
     return c.fetchall()
+  
+  def get_state(self, conn, start_timestamp = None, end_timestamp = None):
+    c= conn.cursor()
+    if start_timestamp == None:
+      start_timestamp = get_last_update(c)
+    else:
+      start_timestamp = get_time(start_timestamp)
+    if end_timestamp == None:
+      end_timestamp = get_last_update(c)
+    state = c.execute('SELECT state_name FROM faction_system_state WHERE faction_name ="{0}"  AND date >= {1} AND date <= {2}'.format(self.name,start_timestamp,end_timestamp)).fetchone()["state_name"]
+    return state
   
   def get_status_in_system(self,system_name, start_timestamp = None, end_timestamp = None):
     if not self.ok:
@@ -611,7 +623,7 @@ class System:
   
   @classmethod
   def get_all_systems(cls):
-    db.get_db()
+    c = db.get_db()
     c.execute('SELECT name FROM Systems')
     factions = [System(faction[0]) for faction in c.fetchall()]
     return factions
@@ -624,7 +636,7 @@ class System:
       timestamp = get_last_update(c)
     faction_name = c.execute('SELECT controller_faction FROM system_status WHERE system = "{0}" AND date = "{1}"'.format(self.name,timestamp)).fetchone()["controller_faction"]
     state = c.execute('SELECT state_name FROM faction_system_state WHERE system_name = "{0}" AND faction_name ="{1}" AND date = "{2}"'.format(self.name,faction_name,timestamp)).fetchone()["state_name"]
-    return {"faction":faction_name,"state":state}
+    return {"name":faction_name,"state":state}
     
   def get_war_risk(self,threshold = WAR_THRESHOLD):
     factions = self.get_factions()
@@ -638,25 +650,24 @@ class System:
             factions_in_risk.append([faction1,faction2])
     return factions_in_risk
       
-  def get_factions(self, start_timestamp = None, end_timestamp = None):
+  def get_factions(self, conn, start_timestamp = None, end_timestamp = None):
     if not self.ok:
       return None
-    c = db.get_db()
+    c = conn.cursor()
     if start_timestamp == None:
-      start_timestamp = get_last_update()
+      start_timestamp = get_last_update(c)
     else:
       start_timestamp = get_time(start_timestamp)
     if end_timestamp == None:
-      end_timestamp = get_last_update()
+      end_timestamp = get_last_update(c)
     else:
       end_timestamp = get_time(end_timestamp)
-
-    c.execute('SELECT name FROM faction_system WHERE system = "{0}" AND date >= {1} AND date <= {2}'.format(self.name,start_timestamp,end_timestamp))
-    factions = [Faction(faction[0]) for faction in c.fetchall()]
+    c.execute('SELECT name FROM faction_system WHERE system = "{0}" AND date >= {1} AND date <= {2} AND influence > 0.0'.format(self.name,start_timestamp,end_timestamp))
+    factions = [faction['name'] for faction in c.fetchall()]
     return factions
   
-  def get_current_factions(self, start_timestamp = None, end_timestamp = None):
-    return self.get_factions(start_timestamp,end_timestamp)
+  def get_current_factions(self,conn, start_timestamp = None, end_timestamp = None):
+    return self.get_factions(conn,start_timestamp,end_timestamp)
     
   def __repr__(self):
     return str(self.json)
@@ -722,6 +733,17 @@ def get_expansion_risk_report(threshold = EXPANSION_THRESHOLD):
     report += "'{0}' from system '{1}' (Influence: {2:.3g} %, State: {3}, Distance: {4} lys)\n".format(risk['faction'],risk['system'],risk['influence']*100.0,risk['state'], System(risk['system']).distance)
   return report
 
+
+systems_controlled = ["Naunin"]
+def fresh_hard_update(local = False):
+  conn = sqlite3.connect(DATABASE)
+  clean_fixed_tables()
+  clean_updates()
+  for controlled_system in systems_controlled:
+    fill_systems_in_bubble(controlled_system, EXPANSION_RADIUS, local)
+  update_tick(conn,history=False)
+  conn.close()
+  
 if 0:
   conn = sqlite3.connect(DATABASE)
   
@@ -761,11 +783,11 @@ if 0:
     print("RECOVERING STATES:",f.get_current_recovering_states())
     current_system = System(systemName)
     factions = current_system.get_factions()
-    
+
     print(get_retreat_risk_report(0.025))
     print(get_war_risk_report(0.01))
     print(get_expansion_risk_report(0.65))
-  
+
   systemName = "Naunin"
   for faction in System(systemName).get_factions():
     print(faction.name)
@@ -773,4 +795,3 @@ if 0:
     if status_history:
       for entry in sorted(status_history):
         print(get_utc_time_from_epoch(entry),status_history[entry])
-  
