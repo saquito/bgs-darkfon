@@ -18,7 +18,6 @@ def get_system_info3():
   if request.method == 'POST':
     error = None
     conn = db.get_db()
-    s = bgs.System(conn,str(request.data))
-    s = bgs.System(conn,"Naunin")
+    s = bgs.System(conn,request.data.decode('utf-8'))
     print(s.get_controller_and_state(conn))
   return json.dumps([s.get_controller_and_state(conn)])

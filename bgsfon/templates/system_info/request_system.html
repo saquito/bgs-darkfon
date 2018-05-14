@@ -28,8 +28,7 @@ app.controller('factionList', function($scope, $http) {
 	  $scope.submit = function() {
     	$http.post("system_controller",$scope.star_system)
         .then(function (response) {
-          $scope.factions = response.data.records;
-          $scope.factions = [{"faction": "Fathers of Nontime", "state": "Boom"}]
+          $scope.factions = response.data;
         });
     };
 });
