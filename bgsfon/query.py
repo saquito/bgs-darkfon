@@ -45,7 +45,12 @@ def get_system_factions():
           state = f.get_state(conn)
           influence = f.get_current_influence_in_system(conn,star_system)
           if state and influence:
-            faction_dict = {"name":faction,"state":state,"influence":"{0:.2f} %".format(influence*100.0)}
+            faction_dict = {"name":faction,"state":state,"influence":"{0:.2f}".format(influence*100.0)}
             result.append(faction_dict)
+  if result:
+    result = sorted(result,key=lambda x: float(x["influence"]),reverse=True)
   return json.dumps(result)
 
+@bp.route('/faction_system_list', methods=('GET', 'POST'))
+def get_faction_system_list():
+  return render_template('query/faction_system_list.html')

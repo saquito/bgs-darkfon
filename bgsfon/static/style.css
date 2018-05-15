@@ -1,6 +1,7 @@
 html { font-family: "Euro Caps"; background: #222; padding: 1rem; color:orange}
 body { max-width: 960px; margin: 0 auto; background: black; }
 h1 { font-family: "Euro Caps"; color: orange; margin: 1rem 0; }
+h2 { font-family: "Euro Caps"; color: orange; margin: 1rem 0; }
 a { color: #377ba8; }
 hr { border: none; border-top: 1px solid black; }
 nav { background: black; display: flex; align-items: center; padding: 0 0.5rem; }
@@ -23,14 +24,44 @@ nav ul li a, nav ul li span, header .action { display: block; padding: 0.5rem; }
 .content input, .content textarea { margin-bottom: 1em; }
 .content textarea { min-height: 12em; resize: vertical; }
 
-table { border:solid;border-width:1px;border-color:orange;border-collapse: collapse}
-table th { border:solid;border-width:1px;border-color:orange;padding:5px;background-color: orange;color:#ffffff;}
-table td { border:solid;border-width:1px;border-color:orange;padding:5px}
+.tab_button { 
+  color: white;
+  align-self: start; 
+  min-width: 10em; 
+  font-family: "Euro Caps";
+  padding: 2px 2px;
+  width: 60px;
+  height:22px;
+  border:solid;
+  border-color:orange;
+  background-color:#fbbd2d;
+  border-width:1px;
+  cursor:pointer;
+  margin:2px
+ }
+li {
+	color: white;
+  align-self: start; 
+  min-width: 10em; 
+  font-family: "Euro Caps";
+  border:solid;
+  border-color:orange;
+  background-color:#fbbd2d;
+  border-width:1px;
+  cursor:pointer;
+}
+label {font-family: "Euro Caps";}
+table { border:solid;border-width:1px;border-color:orange;border-collapse: collapse;width:100%;height:100%}
+table th { border:solid;border-width:1px;border-color:orange;padding:5px;background-color: orange;color:#ffffff;font-family: "Euro Caps";}
+table td { border:solid;border-width:1px;border-color:orange;padding:5px;color:orange;font-family: "Euro Caps";}
 
 input.danger { color: #cc2f2e; }
-input[id=star_system] {
+input[name=star_system] {
   width: 15em;
-  font-family: "Euro Caps";
+  font-family: "Verdana";
+  border: 2px solid orange;
+  border-radius: 4px;
+  margin: 5px;
 }
 input[type=submit] { 
   color: orange;
@@ -49,3 +80,8 @@ input[type=submit] {
 form[id=systeminfo] { 
   display: inline-block;
 }
+
+.navBardemoBasicUsage md-content .ext-content {
+  padding: 50px;
+  margin: 20px;
+  background-color: #FFF2E0; }

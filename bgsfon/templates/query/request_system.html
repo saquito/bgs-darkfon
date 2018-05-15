@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  <h1>{% block title %}Get System Info{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+
+<div ng-app="systemInfo" ng-controller="factionList" ng-cloak>
+<form method="post" id="systeminfo" ng-submit="submit()">
+  <label for="System">System</label>
+  <input name="star_system" ng-model="star_system" required><input type="submit" value="Search">
+</form>
+<div id="tab_bar">
+<ul class="nav nav-tabs">
+  <li class="active"><a href="#">System</a></li>
+  <li><a href="#">Risks</a></li>
+  <li><a href="#">Activities</a></li>
+</ul>
+</div>
+
+<table>
+<tr><th>Faction</th><th>State</th><th>Influence</th></tr></tr>
+<tr ng-repeat="faction in factions">
+    {% raw %}
+    <td>{{faction.name}}</td>
+    <td>{{faction.state}}</td>
+    <td>{{faction.influence}}</td>
+    {% endraw %}
+</tr>
+</table>
+</div>
+
+<script>
+var app = angular.module('systemInfo', []);
+app.controller('factionList', function($scope, $http, $templateCache, $templateRequest, $rootScope) {
+	  $scope.tab_panel="";
+    $scope.submit = function() {
+      $http.post("system_factions",$scope.star_system)
+        .then(function (response) {
+          $scope.factions = response.data;
+          $scope.system = $scope.star_system;
+        });
+    };
+    $scope.changeTab = function($location) {
+    	$templateRequest('faction_system_list').then(function (response) {
+            $templateCache.put('tab_panel', response);
+            $rootScope.templatesDone = true;
+      });
+    };
+});
+
+
+</script>
+{% endblock %}
