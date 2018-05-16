@@ -54,3 +54,11 @@ def get_system_factions():
 @bp.route('/faction_system_list', methods=('GET', 'POST'))
 def get_faction_system_list():
   return render_template('query/faction_system_list.html')
+
+@bp.route('/system_info', methods=('GET', 'POST'))
+def get_system_info_pane():
+  return render_template('query/system_info.html')
+
+@bp.route('/system_info_test', methods=('GET', 'POST'))
+def get_system_info_test_pane():
+  return render_template('query/system_info_test.html')

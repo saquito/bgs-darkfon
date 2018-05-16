@@ -1,40 +1,49 @@
-{% extends 'base.html' %}
-
-{% block header %}
-  <h1>{% block title %}Get System Info{% endblock %}</h1>
-{% endblock %}
-
-{% block content %}
-
-<div ng-app="systemInfo" ng-controller="factionList" ng-cloak>
-<form method="post" id="systeminfo" ng-submit="submit()">
-  <label for="System">System</label>
-  <input name="star_system" ng-model="star_system" required><input type="submit" value="Search">
-</form>
-<div id="tab_bar">
-<ul class="nav nav-tabs">
-  <li class="active"><a href="#">System</a></li>
-  <li><a href="#">Risks</a></li>
-  <li><a href="#">Activities</a></li>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Bootstrap Example</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap.css') }}">
+  <script src="{{ url_for('static', filename='jquery.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='bootstrap.js') }}"></script>
+  <script src="{{ url_for('static', filename='angular.min.js') }}"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<ul class="nav nav-pills">
+  <li class="active"><a data-toggle="pill" href="#home">Home</a></li>
+  <li><a data-toggle="pill" href="#system">System</a></li>
+    <li><a data-toggle="pill" href="#reports">Reports</a></li>
+  <li><a data-toggle="pill" href="#activities">Activities</a></li>
+  <li><a data-toggle="pill" href="#tools">Tools</a></li>
+  <li><a data-toggle="pill" href="#settings">Settings</a></li>
 </ul>
-</div>
-
-<table>
-<tr><th>Faction</th><th>State</th><th>Influence</th></tr></tr>
-<tr ng-repeat="faction in factions">
-    {% raw %}
-    <td>{{faction.name}}</td>
-    <td>{{faction.state}}</td>
-    <td>{{faction.influence}}</td>
-    {% endraw %}
-</tr>
-</table>
+<div ng-app="systemInfo" ng-controller="factionList" ng-cloak>
+	<div>
+	<div class="tab-content">
+	  <div id="home" class="tab-pane in active">
+	    <h3>BGS Tool</h3>
+	    <p>This tools is aimed to support the BGS activities of the faction <b>Fathers of Nontime</b></p>
+	  </div>
+	  <div id="system" class="tab-pane">
+	    <form method="post" id="systeminfo" ng-submit="submit()">
+	      <label for="System">System</label>
+	      <input name="star_system" ng-model="star_system" required><input type="submit" value="Search">
+	    </form>
+	    <faction-system-list></faction-system-list>
+	  </div>
+	  <div id="menu2" class="tab-pane">
+	    <h3>Menu 2</h3>
+	    <p>Some content in menu 2.</p>
+	  </div>
+	</div>
 </div>
 
 <script>
 var app = angular.module('systemInfo', []);
 app.controller('factionList', function($scope, $http, $templateCache, $templateRequest, $rootScope) {
-	  $scope.tab_panel="";
+    $scope.tab_panel="";
     $scope.submit = function() {
       $http.post("system_factions",$scope.star_system)
         .then(function (response) {
@@ -42,14 +51,14 @@ app.controller('factionList', function($scope, $http, $templateCache, $templateR
           $scope.system = $scope.star_system;
         });
     };
-    $scope.changeTab = function($location) {
-    	$templateRequest('faction_system_list').then(function (response) {
-            $templateCache.put('tab_panel', response);
-            $rootScope.templatesDone = true;
-      });
+});
+app.directive("factionSystemList", function() {
+    return {
+        restrict : "E",
+        templateUrl : "faction_system_list"
     };
 });
 
-
 </script>
-{% endblock %}
+</body>
+</html>

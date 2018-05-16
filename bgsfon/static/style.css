@@ -1,4 +1,4 @@
-html { font-family: "Euro Caps"; background: #222; padding: 1rem; color:orange}
+html { font-family: "Euro Caps"; background: #222; padding: 1rem; color:orange;}
 body { max-width: 960px; margin: 0 auto; background: black; }
 h1 { font-family: "Euro Caps"; color: orange; margin: 1rem 0; }
 h2 { font-family: "Euro Caps"; color: orange; margin: 1rem 0; }
@@ -50,7 +50,7 @@ li {
   border-width:1px;
   cursor:pointer;
 }
-label {font-family: "Euro Caps";}
+label {font-family: "Euro Caps";color:orange;}
 table { border:solid;border-width:1px;border-color:orange;border-collapse: collapse;width:100%;height:100%}
 table th { border:solid;border-width:1px;border-color:orange;padding:5px;background-color: orange;color:#ffffff;font-family: "Euro Caps";}
 table td { border:solid;border-width:1px;border-color:orange;padding:5px;color:orange;font-family: "Euro Caps";}

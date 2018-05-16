@@ -4,28 +4,66 @@
   <title>Bootstrap Example</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap.css') }}">
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.9/angular.min.js"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-
-<div class="container">
-  <h3>Tabs With Dropdown Menu</h3>
-  <ul class="nav nav-tabs">
-    <li class="active"><a href="#">Home</a></li>
-    <li class="dropdown">
-      <a class="dropdown-toggle" data-toggle="dropdown" href="#">Menu 1 <span class="caret"></span></a>
-      <ul class="dropdown-menu">
-        <li><a href="#">Submenu 1-1</a></li>
-        <li><a href="#">Submenu 1-2</a></li>
-        <li><a href="#">Submenu 1-3</a></li>                        
-      </ul>
-    </li>
-    <li><a href="#">Menu 2</a></li>
-    <li><a href="#">Menu 3</a></li>
-  </ul>
+<div ng-app="systemInfo" ng-controller="factionList" ng-cloak>
+<ul class="nav nav-pills">
+  <li class="active"><a data-toggle="pill" href="#home">Home</a></li>
+  <li><a data-toggle="pill" href="#menu1">Menu 1</a></li>
+  <li><a data-toggle="pill" href="#menu2">Menu 2</a></li>
+</ul>
+<div>
+<div class="tab-content">
+  <div id="home" class="tab-pane in active">
+    <h3 color="#fff">HOME</h3>
+    <p>Some content.</p>
+  </div>
+  <div id="menu1" class="tab-pane">
+    <table>
+      <form method="post" id="systeminfo" ng-submit="submit()">
+			  <label for="System">System</label>
+			  <input name="star_system" ng-model="star_system" required><input type="submit" value="Search">
+			</form>
+		  <tr><th>Faction</th><th>State</th><th>Influence</th></tr></tr>
+		  <tr ng-repeat="faction in factions">
+		  {% raw %}
+		  <td>{{faction.name}}</td>
+		  <td>{{faction.state}}</td>
+		  <td>{{faction.influence}}</td>
+		  {% endraw %}
+		  </tr>
+		</table>
+  </div>
+  <div id="menu2" class="tab-pane">
+    <h3>Menu 2</h3>
+    <p>Some content in menu 2.</p>
+  </div>
 </div>
+</div>
+<script>
+var app = angular.module('systemInfo', []);
+app.controller('factionList', function($scope, $http, $templateCache, $templateRequest, $rootScope) {
+    $scope.tab_panel="";
+    $scope.submit = function() {
+      $http.post("system_factions",$scope.star_system)
+        .then(function (response) {
+          $scope.factions = response.data;
+          $scope.system = $scope.star_system;
+        });
+    };
+    $scope.changeTab = function($location) {
+      $templateRequest('faction_system_list').then(function (response) {
+            $templateCache.put('tab_panel', response);
+            $rootScope.templatesDone = true;
+      });
+    };
+});
 
+</script>
 </body>
 </html>
