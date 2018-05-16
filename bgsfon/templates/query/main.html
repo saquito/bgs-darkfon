@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Bootstrap Example</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap.css') }}">
+  <script src="{{ url_for('static', filename='jquery.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='bootstrap.js') }}"></script>
+  <script src="{{ url_for('static', filename='angular.min.js') }}"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <ul class="nav nav-pills">
+    <li class="active"><a data-toggle="pill" href="#home">Home</a></li>
+    <li><a data-toggle="pill" href="#system">System</a></li>
+    <li><a data-toggle="pill" href="#menu2">Menu 2</a></li>
+  </ul>
+<script>
+var app = angular.module('systemInfo', []);
+app.controller('factionList', function($scope, $http, $templateCache, $templateRequest, $rootScope) {
+    $scope.tab_panel="";
+    $scope.submit = function() {
+      $http.post("system_factions",$scope.star_system)
+        .then(function (response) {
+          $scope.factions = response.data;
+          $scope.system = $scope.star_system;
+        });
+    };
+});
+app.directive("factionSystemList", function() {
+    return {
+        restrict : "E",
+        templateUrl : "faction_system_list"
+    };
+});
+
+</script>
+</body>
+</html>
