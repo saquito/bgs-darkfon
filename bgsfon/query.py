@@ -7,10 +7,11 @@ from . import db
 # )
 
 from flask import (
-    Blueprint, render_template, request
+    Blueprint, render_template, request,send_from_directory
 )
 
 bp = Blueprint('query', __name__, url_prefix='/query')
+bp_media = Blueprint('media', __name__, url_prefix='/media')
 
 @bp.route('/', methods=('GET', 'POST'))
 def get_system_info():
@@ -48,8 +49,41 @@ def get_system_factions():
             faction_dict = {"name":faction,"state":state,"influence":"{0:.2f}".format(influence*100.0)}
             result.append(faction_dict)
   if result:
+    print(result)
     result = sorted(result,key=lambda x: float(x["influence"]),reverse=True)
   return json.dumps(result)
+
+@bp.route('/near_systems', methods=('GET', 'POST'))
+def get_near_systems():
+  result = []
+  if request.method == 'POST':
+    conn = db.get_db()
+    star_system = bgs.System(conn,request.data.decode('utf-8'))
+    if star_system:
+      near_systems = star_system.get_closest_systems(conn, 10)
+      for near_sys in near_systems:
+        num_factions = len(bgs.System(conn,near_sys["system"]).get_factions(conn))
+        result.append({"name":near_sys["system"],"distance":near_sys["distance"],"num_factions":num_factions})
+  if result:
+    result = sorted(result,key=lambda x: float(x["distance"]))
+  return json.dumps(result)
+
+@bp.route('/next_expansion', methods=('GET', 'POST'))
+def get_next_expansion():
+  result = []
+  if request.method == 'POST':
+    conn = db.get_db()
+    star_system = bgs.System(conn,request.data.decode('utf-8'))
+    if star_system:
+        next_expansion = star_system.get_next_expansion_system(conn)["system"]
+        print(next_expansion)
+        result = next_expansion
+  return next_expansion
+
+@bp.route('/near_systems_list', methods=('GET', 'POST'))
+def get_near_systems_list():
+  return render_template('query/near_systems_list.html')
+
 
 @bp.route('/faction_system_list', methods=('GET', 'POST'))
 def get_faction_system_list():
@@ -62,3 +96,7 @@ def get_system_info_pane():
 @bp.route('/system_info_test', methods=('GET', 'POST'))
 def get_system_info_test_pane():
   return render_template('query/system_info_test.html')
+
+@bp_media.route('/media/<path:filename>')
+def download_file(filename):
+  return send_from_directory("media", filename, as_attachment=True)

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title>Bootstrap Example</title>
+  <title>BGS Tool</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap.css') }}">
@@ -32,6 +32,8 @@
 	      <input name="star_system" ng-model="star_system" required><input type="submit" value="Search">
 	    </form>
 	    <faction-system-list></faction-system-list>
+	    <br>
+	    <near-systems-list></near-systems-list>
 	  </div>
 	  <div id="menu2" class="tab-pane">
 	    <h3>Menu 2</h3>
@@ -50,6 +52,15 @@ app.controller('factionList', function($scope, $http, $templateCache, $templateR
           $scope.factions = response.data;
           $scope.system = $scope.star_system;
         });
+      $http.post("near_systems",$scope.star_system)
+      .then(function (response) {
+        $scope.systems = response.data;
+      });
+      $http.post("next_expansion",$scope.star_system)
+      .then(function (response) {
+        $scope.next_expansion = response.data;
+        console.log($scope.next_expansion);
+      });
     };
 });
 app.directive("factionSystemList", function() {
@@ -58,6 +69,14 @@ app.directive("factionSystemList", function() {
         templateUrl : "faction_system_list"
     };
 });
+
+app.directive("nearSystemsList", function() {
+    return {
+        restrict : "E",
+        templateUrl : "near_systems_list"
+    };
+});
+
 
 </script>
 </body>

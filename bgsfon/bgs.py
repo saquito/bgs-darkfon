@@ -8,14 +8,15 @@ import sys
 import shutil
 from collections import defaultdict
 import itertools
+from math import sqrt
 try:
   from . import db
 except:
   pass
 
-
 EXPANSION_RADIUS = 27.5
 EXPANSION_THRESHOLD = 0.65
+EXPANSION_FACTION_THRESHOLD = 6
 RETREAT_THRESHOLD = 0.05
 WAR_THRESHOLD = 0.05
 TICK_TIME = "15:30:00"
@@ -24,6 +25,11 @@ DEBUG_LEVEL = 0
 LOCAL_JSON_PATH = "LOCAL_JSON"
 DATABASE = "bgs-data.sqlite3"
 conn = None
+
+def distance(p0,p1):
+  x0,y0,z0 = p0
+  x1,y1,z1 = p1
+  return abs(sqrt((x1 - x0) ** 2 + (y1 - y0) ** 2 + (z1 - z0) ** 2))
 
 def debug(message,level = 0):
   if level <= DEBUG_LEVEL:
@@ -86,7 +92,6 @@ def fill_factions_from_system(systemName, local = False):
     return None
   for faction in data_factions['factions']:
     if not fetch_faction(faction['name']):
-      print(faction["name"])
       values = [faction['name'],faction['allegiance'],faction['government'],faction['isPlayer'], None]
       c.execute("INSERT INTO Factions VALUES (?,?,?,?,?)",values)
   conn.commit()    
@@ -103,31 +108,40 @@ def fill_systems_in_bubble(systemName, radius = EXPANSION_RADIUS, local = False)
     distance = system['distance']
     data_system = get_json_data("system_{0}.json".format(system['name']),
                    "https://www.edsm.net/api-v1/system",
-                   {'systemName': system['name'],'showPrimaryStar':1,'showInformation':1}, 
+                   {'systemName': system['name'],'showPrimaryStar':1,'showInformation':1,"showCoordinates":1}, 
                    local)
     population = 0
     economy = 'None'
+    
     if data_system['information']:
+      x,y,z = (0,0,0)
+      if data_system['coords']:
+        x,y,z = data_system['coords']['x'],data_system['coords']['y'],data_system['coords']['z']
       population = data_system['information']['population']
       economy = data_system['information']['economy']
       allegiance = data_system['information']['allegiance']
       faction = data_system['information']['faction']
       factionState = data_system['information']['factionState']
-    values = [data_system['name'],
-              population,
-              economy,distance,allegiance,faction,factionState]
-
-    c.execute("INSERT INTO Systems VALUES (?,?,?,?,?,?,?)",values)
+      values = [data_system['name'],
+                population,
+                economy,distance,allegiance,faction,factionState,x,y,z] 
+      try:
+        c.execute("INSERT INTO Systems VALUES (?,?,?,?,?,?,?,?,?,?)",values)
+      except sqlite3.IntegrityError:
+        pass
     data_stations = get_json_data("stations_{0}.json".format(system['name']),
-                   "https://www.edsm.net/api-system-v1/stations",
-                   {'systemName': system['name']}, 
-                   local)
+                     "https://www.edsm.net/api-system-v1/stations",
+                     {'systemName': system['name']}, 
+                     local)
     for station in data_stations['stations']:
       controlling_faction = None
       if 'controllingFaction' in station:
         controlling_faction = station['controllingFaction']['name']
       values = [systemName,station['name'],station['type'],station['distanceToArrival'],station['economy'],controlling_faction]
-      c.execute("INSERT INTO Stations VALUES (?,?,?,?,?,?)",values)
+      try:
+        c.execute("INSERT INTO Stations VALUES (?,?,?,?,?,?)",values)
+      except sqlite3.IntegrityError:
+        pass
     debug("Updating system: {0}".format(system['name']))
     fill_factions_from_system(data_system['name'], local)
   conn.commit()
@@ -293,14 +307,17 @@ def update_state_entry(timestamp,state_name,state_type,faction_name, system_name
   c.execute("INSERT INTO faction_system_state VALUES",values)
   c.commit()
 
-def update_tick(conn,cur_time = None, local = False, history = False):
+def update_tick(conn,cur_time = None, local = False, history = False,forced=False):
   current_time = get_timestamp(cur_time)
   c = conn.cursor()
-  if not is_update_needed(conn,current_time) and not history:
-    debug("UPDATE NOT NEEDED")
-    return False
+  if not forced:
+    if not is_update_needed(conn,current_time) and not history:
+      debug("UPDATE NOT NEEDED")
+      return False
+    else:
+      debug("UPDATE NEEDED")
   else:
-    debug("UPDATE NEEDED")
+    debug("UPDATE FORCED")
   if not history:
     print("update TICK")
     c.execute("INSERT INTO ticks VALUES (?)",[current_time])
@@ -612,22 +629,39 @@ class System:
     self.name = system_name
     self.ok = False
     self.json = ""
-    try:
-      result = c.execute('SELECT population,economy,distance FROM Systems WHERE name = "{0}"'.format(system_name)).fetchone()
-      self.population, self.economy, self.distance = result["population"],result["economy"],result["distance"]
-      self.ok = True
-    except:
-      print("ERROR getting data!!!")
+#    try:
+    result = c.execute('SELECT population,economy,distance,x,y,z FROM Systems WHERE name = "{0}"'.format(system_name)).fetchone()
+    self.population, self.economy, self.distance, self.x, self.y, self.z = result
+    self.ok = True
+#    except:
+#      print("ERROR getting data!!!")
     if self.ok:
       self.json =  {"name":self.name,"population":self.population,"economy":self.economy,"distance":self.distance}
   
   @classmethod
-  def get_all_systems(cls):
-    c = db.get_db()
+  def get_all_systems(cls,conn):
+    c = conn.cursor()
     c.execute('SELECT name FROM Systems')
-    factions = [System(faction[0]) for faction in c.fetchall()]
+    factions = [System(conn,faction[0]) for faction in c.fetchall()]
     return factions
   
+  def get_closest_systems(self,conn,limit = None):
+    if not self.ok:
+      return None
+    c = conn.cursor()
+    all_systems = System.get_all_systems(conn)
+    system_list = []
+    for near_system in all_systems:
+      system_list.append({"system":near_system.name,"distance":distance([near_system.x,near_system.y,near_system.z],[self.x,self.y,self.z])})
+    return sorted(system_list,key=lambda x:[x["distance"]])[1:limit]
+  
+  def get_next_expansion_system(self,conn):
+    for candidate in self.get_closest_systems(conn):
+      candidate_system = System(conn,candidate["system"])
+      if len(candidate_system.get_factions(conn)) <= EXPANSION_FACTION_THRESHOLD:
+        return({"system":candidate["system"],"distance":candidate["distance"]})
+      else:
+        print(candidate,"- NO:",len(candidate_system.get_factions(conn)),"factions")
   
   def get_controller_and_state(self,c,timestamp = None):
     if not self.ok:
@@ -663,7 +697,7 @@ class System:
     else:
       end_timestamp = get_time(end_timestamp)
     c.execute('SELECT name FROM faction_system WHERE system = "{0}" AND date >= {1} AND date <= {2} AND influence > 0.0'.format(self.name,start_timestamp,end_timestamp))
-    factions = [faction['name'] for faction in c.fetchall()]
+    factions = [tuple(faction)[0] for faction in c.fetchall()]
     return factions
   
   def get_current_factions(self,conn, start_timestamp = None, end_timestamp = None):
@@ -795,3 +829,11 @@ if 0:
     if status_history:
       for entry in sorted(status_history):
         print(get_utc_time_from_epoch(entry),status_history[entry])
+ 
+conn = sqlite3.connect(DATABASE)
+s = System(conn, "Naunin")
+print(s.get_closest_systems(conn,5))
+print(s.get_next_expansion_system(conn))
+
+conn.close()
+ 

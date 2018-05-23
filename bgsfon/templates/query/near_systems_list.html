@@ -1,0 +1,11 @@
+<table>
+<label>Nearest Systems</label>
+<tr><th>System</th><th>Distance</th><th>Number of Factions</th></tr>
+<tr ng-repeat="system in systems">
+    {% raw %}
+    <td>{{system.name}}</td>
+    <td>{{system.distance | number: 2}}</td>
+    <td>{{system.num_factions}}</td>
+    {% endraw %}
+</tr>
+</table>
