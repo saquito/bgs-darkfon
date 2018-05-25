@@ -84,4 +84,9 @@ form[id=systeminfo] {
 .navBardemoBasicUsage md-content .ext-content {
   padding: 50px;
   margin: 20px;
-  background-color: #FFF2E0; }
+  background-color: #FFF2E0; 
+}
+
+#left-panel > div {
+	
+}  
