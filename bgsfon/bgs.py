@@ -23,7 +23,7 @@ TICK_TIME = "15:30:00"
 TIME_FORMAT = '%d-%m-%Y %H:%M:%S'
 DEBUG_LEVEL = 0
 LOCAL_JSON_PATH = "LOCAL_JSON"
-DATABASE = "bgs-data.sqlite3"
+DATABASE = "bgs-data-rework.sqlite3"
 conn = None
 
 def distance(p0,p1):
@@ -94,7 +94,7 @@ def fill_factions_from_system(systemName, local = False):
     if not fetch_faction(faction['name']):
       values = [faction['name'],faction['allegiance'],faction['government'],faction['isPlayer'], None]
       c.execute("INSERT INTO Factions VALUES (?,?,?,?,?)",values)
-  conn.commit()    
+  conn.commit()
 
 def fill_systems_in_bubble(systemName, radius = EXPANSION_RADIUS, local = False): 
   conn = get_db_connection()
@@ -146,7 +146,7 @@ def fill_systems_in_bubble(systemName, radius = EXPANSION_RADIUS, local = False)
     fill_factions_from_system(data_system['name'], local)
   conn.commit()
 
-def fetch_systems(criteria = None):
+def get_systems(criteria = None):
     conn = get_db_connection()
     c = conn.cursor()
     if criteria:
@@ -300,10 +300,10 @@ def update_system(systemName, local = False):
                    local)
   return data_system
 
-def update_state_entry(timestamp,state_name,state_type,faction_name, system_name, trend):
+def update_state_entry(timestamp,state_name,state_type,faction_name, trend):
   conn = get_db_connection()
   c = conn.cursor()
-  values = [timestamp,state_name,state_type,faction_name, system_name, trend]
+  values = [timestamp,state_name,state_type,faction_name, trend]
   c.execute("INSERT INTO faction_system_state VALUES",values)
   c.commit()
 
@@ -321,7 +321,7 @@ def update_tick(conn,cur_time = None, local = False, history = False,forced=Fals
   if not history:
     print("update TICK")
     c.execute("INSERT INTO ticks VALUES (?)",[current_time])
-  star_systems = fetch_systems("population > 0 ORDER BY population")
+  star_systems = get_systems("population > 0 ORDER BY population")
   total_systems = len(star_systems)
   current_start_system = 1
   for star_system in star_systems:
@@ -648,7 +648,6 @@ class System:
   def get_closest_systems(self,conn,limit = None):
     if not self.ok:
       return None
-    c = conn.cursor()
     all_systems = System.get_all_systems(conn)
     system_list = []
     for near_system in all_systems:
@@ -830,10 +829,203 @@ if 0:
       for entry in sorted(status_history):
         print(get_utc_time_from_epoch(entry),status_history[entry])
  
+ 
+def fetch_bubble(systemName, radius = EXPANSION_RADIUS, local = False): 
+  conn = get_db_connection()
+  c = conn.cursor()
+  debug("RADIUS:",radius)
+  data_bubble = get_json_data("sphere_{0}.json".format(systemName),
+                       "https://www.edsm.net/api-v1/sphere-systems",
+                       {'systemName': systemName,'radius':radius}, 
+                       local)
+  for system in data_bubble:
+    distance = system['distance']
+    data_system = get_json_data("system_{0}.json".format(system['name']),
+                   "https://www.edsm.net/api-v1/system",
+                   {'systemName': system['name'],'showPrimaryStar':1,'showInformation':1,"showCoordinates":1}, 
+                   local)
+    population = 0
+    economy = 'None'
+    
+    if data_system['information']:
+      x,y,z = (0,0,0)
+      if data_system['coords']:
+        x,y,z = data_system['coords']['x'],data_system['coords']['y'],data_system['coords']['z']
+      population = data_system['information']['population']
+      economy = data_system['information']['economy']
+      allegiance = data_system['information']['allegiance']
+      faction = data_system['information']['faction']
+      factionState = data_system['information']['factionState']
+      values = [data_system['name'],
+                population,
+                economy,distance,allegiance,faction,factionState,x,y,z] 
+      try:
+        c.execute("INSERT INTO Systems VALUES (?,?,?,?,?,?,?,?,?,?)",values)
+      except sqlite3.IntegrityError:
+        pass
+      data_stations = get_json_data("stations_{0}.json".format(system['name']),
+                       "https://www.edsm.net/api-system-v1/stations",
+                       {'systemName': system['name']}, 
+                       local)
+      for station in data_stations['stations']:
+        controlling_faction = None
+        if 'controllingFaction' in station:
+          controlling_faction = station['controllingFaction']['name']
+        values = [systemName,station['name'],station['type'],station['distanceToArrival'],station['economy'],controlling_faction]
+        try:
+          c.execute("INSERT INTO Stations VALUES (?,?,?,?,?,?)",values)
+        except sqlite3.IntegrityError:
+          pass
+      debug("Updating system: {0}".format(system['name']))
+      fetch_system_factions(data_system['name'], local)
+  conn.commit()
+ 
+def fetch_system_factions(systemName, local = False):
+  conn = get_db_connection()
+  c = conn.cursor()
+  data_factions = get_json_data("factions_{0}.json".format(systemName),
+                       "https://www.edsm.net/api-system-v1/factions",
+                       {'systemName': systemName, 'showHistory':1}, 
+                       local)
+  if not data_factions['factions']:
+    return None
+  for faction in data_factions['factions']:
+    if not fetch_faction(faction['name']):
+      values = [faction['name'],faction['allegiance'],faction['government'],faction['isPlayer'], None]
+      c.execute("INSERT INTO Factions VALUES (?,?,?,?,?)",values)
+  conn.commit()
+ 
+def update_tick2(conn,cur_time = None, local = False, history = False,forced=False):
+  current_time = get_timestamp(cur_time)
+  c = conn.cursor()
+  if not forced:
+    if not is_update_needed(conn,current_time) and not history:
+      debug("UPDATE NOT NEEDED")
+      return False
+    else:
+      debug("UPDATE NEEDED")
+  else:
+    debug("UPDATE FORCED")
+  if not history:
+    print("update TICK")
+    c.execute("INSERT INTO ticks VALUES (?)",[current_time])
+  star_systems = get_systems("population > 0 ORDER BY population")
+  total_systems = len(star_systems)
+  print(total_systems)
+  current_start_system = 1
+  for star_system in star_systems:
+    systemName = star_system[0]
+    system_info = update_system(systemName)['information']
+    sys.stdout.write("Updating System {0} [{1}/{2}]           \r".format(systemName,current_start_system,total_systems))
+    current_start_system += 1
+    sys.stdout.flush()
+    values = [current_time,systemName,system_info['faction'],system_info['security']]
+    if not history:
+      c.execute("INSERT INTO system_status VALUES (?,?,?,?)",values)
+    
+    data_factions = get_json_data("factions_{0}.json".format(systemName),
+                         "https://www.edsm.net/api-system-v1/factions",
+                         {'systemName': systemName,'showHistory':1}, 
+                         local)
+    if not data_factions['factions']:
+      return False
+    for faction in data_factions['factions']:
+      system_faction_entries = []
+      active_state_entries = []
+      pending_state_entries = []
+      recovering_state_entries = []  
+      if history:
+        for timestamp in faction['stateHistory']:
+          state = faction['stateHistory'][timestamp]
+          active_state_entries.append([int(timestamp),state,'activeState',faction['name'],0])
+          #print(timestamp,state)
+        for timestamp in faction['influenceHistory']:
+          system_faction_entries.append([int(timestamp),
+            faction['name'],
+            systemName,
+            faction['influenceHistory'][timestamp]])
+        if faction['recoveringStatesHistory']:
+          for timestamp,state in faction['recoveringStatesHistory'].items():
+            if not state:
+              state = {'state': "None",'trend':0}
+            else:
+              state = state[0]
+            recovering_state_entries.append([int(timestamp),
+                                  state['state'],
+                                  "recoveringState",
+                                  faction['name'],
+                                  state['trend']])
+        if faction['pendingStatesHistory']:
+          for timestamp,state in faction['pendingStatesHistory'].items():
+            if not state:
+              continue
+            state = state[0]
+            pending_state_entries.append([int(timestamp),
+                                  state['state'],
+                                  "pendingState",
+                                  faction['name'],
+                                  state['trend']])
+      else: 
+        system_faction_entries.append([current_time,
+                                        faction['name'],
+                                        systemName,
+                                        faction['influence']])
+        active_state_entries.append([current_time,faction['state'],'activeState',faction['name'],0])
+        for state in faction['recoveringStates']:
+          pending_state_entries.append([current_time,
+                                state['state'],
+                                "recoveringState",
+                                faction['name'],
+                                state['trend']])
+        for state in faction['pendingStates']:
+          recovering_state_entries.append([current_time,
+                                state['state'],
+                                "pendingState",
+                                faction['name'],
+                                state['trend']])
+      for values in system_faction_entries:
+        if history:
+          check_query = """
+          SELECT * FROM faction_system WHERE
+          date={0} AND
+          name="{1}" AND
+          system="{2}" AND
+          influence={3}""".format(*values)
+          c.execute(check_query)
+          if c.fetchone():
+            #debug("ENTRY_ALREADY_EXISTS")
+            continue
+        try: 
+          c.execute("INSERT INTO faction_system VALUES (?,?,?,?)",values)
+        except sqlite3.IntegrityError:
+          continue
+      for values in active_state_entries:
+        try:
+          c.execute("INSERT INTO faction_state VALUES (?,?,?,?,?)",values)
+        except sqlite3.IntegrityError:
+          continue
+      for values in pending_state_entries:
+        try:
+          c.execute("INSERT INTO faction_state VALUES (?,?,?,?,?)",values)
+        except sqlite3.IntegrityError:
+          continue
+      for values in recovering_state_entries:
+        try:
+          c.execute("INSERT INTO faction_state VALUES (?,?,?,?,?)",values)
+        except sqlite3.IntegrityError:
+          continue
+        
+        if history:  
+          conn.commit()
+  conn.commit()
+  return True
+ 
+ 
 conn = sqlite3.connect(DATABASE)
-s = System(conn, "Naunin")
-print(s.get_closest_systems(conn,5))
-print(s.get_next_expansion_system(conn))
+
+#fetch_bubble("Naunin")
+#fetch_bubble("Smethells 1")
+update_tick2(conn,history = True,forced=True)
 
 conn.close()
  
