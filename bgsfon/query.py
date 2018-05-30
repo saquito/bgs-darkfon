@@ -80,6 +80,11 @@ def get_next_expansion():
         result = next_expansion
   return next_expansion
 
+@bp.route('/main_test', methods=('GET', 'POST'))
+def main_test():
+  return render_template('query/main_test.html')
+
+
 @bp.route('/near_systems_list', methods=('GET', 'POST'))
 def get_near_systems_list():
   return render_template('query/near_systems_list.html')

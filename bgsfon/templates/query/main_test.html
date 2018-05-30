@@ -1,0 +1,81 @@
+<html>
+<head>
+  <title>Main Test - BGS Tool</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap.css') }}">
+  <script src="{{ url_for('static', filename='jquery.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='bootstrap.js') }}"></script>
+  <script src="{{ url_for('static', filename='angular.min.js') }}"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="bsgtool-container">
+  <nav id="span-tab-buttons" class="bsgtool-nav-left">
+  </nav>
+  <div class="bsgtool-column">
+		<ul class="nav nav-pills">
+		  <li class="active"><a data-toggle="pill" href="#home">Home</a></li>
+		  <li><a data-toggle="pill" href="#system">System</a></li>
+		    <li><a data-toggle="pill" href="#reports">Reports</a></li>
+		  <li><a data-toggle="pill" href="#activities">Activities</a></li>
+		  <li><a data-toggle="pill" href="#tools">Tools</a></li>
+		  <li><a data-toggle="pill" href="#settings">Settings</a></li>
+		</ul>
+	</div>
+</div>
+<div class="bsgtool-container">
+  <nav class="bsgtool-nav-left">
+    <ul class="nav flex-column">
+      <li class="active"><a data-toggle="pill" href="#home">Home</a></li>
+      <li><a href="summary" class="left-menu-option">Summary</a></li>
+      <li><a href="bubble" class="left-menu-option">Bubble</a></li>
+      <li><a href="main_test" class="left-menu-option">Systems</a></li>
+      <li><a  href="factions" class="left-menu-option">Factions</a></li>
+	  </ul>
+  </nav>
+  <div class="bsgtool-column">
+		<div ng-app="systemInfo" ng-controller="factionList" ng-cloak>
+		  <div>
+		  <div class="tab-content">
+		    <div id="home" class="tab-pane in active">
+		      <h3>BGS Tool</h3>
+		      <p>This tools is aimed to support the BGS activities of the faction <b>Fathers of Nontime</b></p>
+		    </div>
+		    <div id="system" class="tab-pane">
+		      <div class="searchbox">
+			      <form method="post" id="systeminfo" ng-submit="submit()">
+			        <label for="System">System</label>
+			        <input name="star_system" ng-model="star_system" required><input type="submit" value="Search">
+			      </form>
+		      </div>
+		      <div id="left-panel"><faction-system-list></faction-system-list></div>
+		      <div id="right-panel"><near-systems-list></near-systems-list></div>
+		    </div>
+		    <div id="reports" class="tab-pane">
+		      <h3>Menu Reports</h3>
+		      <p>Some content in menu 2.</p>
+		    </div>
+		    <div id="activities" class="tab-pane">
+          <h3>Menu Activities</h3>
+          <p>Some content in menu 2.</p>
+        </div>
+        <div id="tools" class="tab-pane">
+          <h3>Menu Tools</h3>
+          <p>Some content in menu 2.</p>
+        </div>
+        <div id="settings" class="tab-pane">
+          <h3>Menu Settings</h3>
+          <p>Some content in menu 2.</p>
+        </div>
+		  </div>
+		</div>
+  </div>
+</div>
+</div>
+<div class="bsgtool-container footer">
+Footer
+</div>
+<script src="{{ url_for('static', filename='code.js') }}"></script>
+</body>
+</html>

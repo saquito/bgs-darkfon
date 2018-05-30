@@ -42,8 +42,8 @@
 </div>
 
 <script>
-var app = angular.module('systemInfo', []);
-app.controller('factionList', function($scope, $http, $templateCache, $templateRequest, $rootScope) {
+var app_system_info = angular.module('systemInfo', []);
+app_system_info.controller('factionList', function($scope, $http, $templateCache, $templateRequest, $rootScope) {
     $scope.tab_panel="";
     $scope.submit = function() {
       $http.post("system_factions",$scope.star_system)
@@ -62,14 +62,14 @@ app.controller('factionList', function($scope, $http, $templateCache, $templateR
       });
     };
 });
-app.directive("factionSystemList", function() {
+app_system_info.directive("factionSystemList", function() {
     return {
         restrict : "E",
         templateUrl : "faction_system_list"
     };
 });
 
-app.directive("nearSystemsList", function() {
+app_system_info.directive("nearSystemsList", function() {
     return {
         restrict : "E",
         templateUrl : "near_systems_list"
