@@ -1,10 +1,12 @@
 <table>
-<tr><th>Faction</th><th>State</th><th>Influence</th></tr></tr>
+<tr><th>Faction</th><th>State</th><th>Influence</th><th>Player</th><th>Last Update</th></tr></tr>
 <tr ng-repeat="faction in factions">
     {% raw %}
     <td>{{faction.name}}</td>
     <td>{{faction.state}}</td>
     <td>{{faction.influence}}</td>
+    <td>{{faction.is_player}}</td>
+    <td>{{faction.last_update}}</td>
     {% endraw %}
 </tr>
 </table>

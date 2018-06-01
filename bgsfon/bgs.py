@@ -9,21 +9,29 @@ import shutil
 from collections import defaultdict
 import itertools
 from math import sqrt
+
+
+IS_FLASK_ENVIRONMENT = False
+
 try:
   from . import db
+  IS_FLASK_ENVIRONMENT = True
 except:
   pass
 
 EXPANSION_RADIUS = 27.5
 EXPANSION_THRESHOLD = 0.65
 EXPANSION_FACTION_THRESHOLD = 6
+EXPANSION_FACTION_MAX = 7
 RETREAT_THRESHOLD = 0.05
 WAR_THRESHOLD = 0.05
 TICK_TIME = "15:30:00"
 TIME_FORMAT = '%d-%m-%Y %H:%M:%S'
+DATE_FORMAT = '%Y-%m-%d'
 DEBUG_LEVEL = 0
 LOCAL_JSON_PATH = "LOCAL_JSON"
 DATABASE = "bgs-data-rework.sqlite3"
+FACTION_CONTROLLED = "Fathers of Nontime"
 conn = None
 
 def distance(p0,p1):
@@ -172,6 +180,14 @@ def clean_fixed_tables():
   c.execute("DELETE FROM Stations")
   conn.commit()
 
+def get_days(timestamp1,timestamp2):
+  params1 = [int(num) for num in get_date_from_epoch(timestamp1).split("-")]
+  params2 = [int(num) for num in get_date_from_epoch(timestamp2).split("-")]
+  d1 = datetime.date(*params1)
+  d2 = datetime.date(*params2)
+  delta = d2 - d1
+  print(abs(delta.days))
+
 def get_time(cur_time = None):
   current_time = time.time()
   if cur_time != None:
@@ -259,6 +275,11 @@ def get_utc_time_from_epoch(epoch):
   if isinstance(epoch,str):
     epoch = int(epoch)
   return time.strftime(TIME_FORMAT,time.gmtime(epoch))
+
+def get_date_from_epoch(epoch):
+  if isinstance(epoch,str):
+    epoch = int(epoch)
+  return time.strftime(DATE_FORMAT,time.gmtime(epoch))
 
 def get_epoch_from_utc_time(utc_time):
   return time.mktime(time.strptime(utc_time, TIME_FORMAT))
@@ -349,7 +370,7 @@ def update_tick(conn,cur_time = None, local = False, history = False,forced=Fals
       if history:
         for timestamp in faction['stateHistory']:
           state = faction['stateHistory'][timestamp]
-          active_state_entries.append([int(timestamp),state,'activeState',faction['name'],systemName,0])
+          active_state_entries.append([int(timestamp),state,'activeState',faction['name'],0])
           #print(timestamp,state)
         for timestamp in faction['influenceHistory']:
           system_faction_entries.append([int(timestamp),
@@ -365,7 +386,6 @@ def update_tick(conn,cur_time = None, local = False, history = False,forced=Fals
                                   state['state'],
                                   "recoveringState",
                                   faction['name'],
-                                  systemName,
                                   state['trend']])
         if faction['pendingStatesHistory']:
           for timestamp,state in faction['pendingStatesHistory'].items():
@@ -376,27 +396,24 @@ def update_tick(conn,cur_time = None, local = False, history = False,forced=Fals
                                   state['state'],
                                   "pendingState",
                                   faction['name'],
-                                  systemName,
                                   state['trend']])
       else: 
         system_faction_entries.append([current_time,
                                         faction['name'],
                                         systemName,
                                         faction['influence']])
-        active_state_entries.append([current_time,faction['state'],'activeState',faction['name'],systemName,0])
+        active_state_entries.append([current_time,faction['state'],'activeState',faction['name'],0])
         for state in faction['recoveringStates']:
           pending_state_entries.append([current_time,
                                 state['state'],
                                 "recoveringState",
                                 faction['name'],
-                                systemName,
                                 state['trend']])
         for state in faction['pendingStates']:
           recovering_state_entries.append([current_time,
                                 state['state'],
                                 "pendingState",
                                 faction['name'],
-                                systemName,
                                 state['trend']])
       for values in system_faction_entries:
         if history:
@@ -413,11 +430,11 @@ def update_tick(conn,cur_time = None, local = False, history = False,forced=Fals
         c.execute("INSERT INTO faction_system VALUES (?,?,?,?)",values)
         
       for values in active_state_entries:
-        c.execute("INSERT INTO faction_system_state VALUES (?,?,?,?,?,?)",values)
+        c.execute("INSERT INTO faction_state VALUES (?,?,?,?,?,?)",values)
       for values in pending_state_entries:
-        c.execute("INSERT INTO faction_system_state VALUES (?,?,?,?,?,?)",values)
+        c.execute("INSERT INTO faction_state VALUES (?,?,?,?,?,?)",values)
       for values in recovering_state_entries:
-        c.execute("INSERT INTO faction_system_state VALUES (?,?,?,?,?,?)",values)
+        c.execute("INSERT INTO faction_state VALUES (?,?,?,?,?,?)",values)
         
         if history:  
           conn.commit()
@@ -581,19 +598,29 @@ class Faction:
         return None
     conn = get_db_connection()
     c = conn.cursor()
-    c.execute('SELECT DISTINCT state_name, trend FROM faction_system_state WHERE faction_name = "{0}" AND date ={1} AND state_type="recoveringState"'.format(self.name,get_last_update()))
+    c.execute('SELECT DISTINCT state_name, trend FROM faction_state WHERE faction_name = "{0}" AND date ={1} AND state_type="recoveringState"'.format(self.name,get_last_update()))
     return c.fetchall()
   
-  def get_state(self, conn, start_timestamp = None, end_timestamp = None):
+  def get_states(self, conn, start_timestamp = None, end_timestamp = None):
     c= conn.cursor()
     if start_timestamp == None:
       start_timestamp = get_last_update(c)
     else:
       start_timestamp = get_time(start_timestamp)
     if end_timestamp == None:
-      end_timestamp = get_last_update(c)
-    state = c.execute('SELECT state_name FROM faction_system_state WHERE faction_name ="{0}"  AND date >= {1} AND date <= {2}'.format(self.name,start_timestamp,end_timestamp)).fetchone()["state_name"]
-    return state
+      end_timestamp = 0xFFFFFFFF  
+    states  = c.execute('SELECT date,state_name FROM faction_state WHERE state_type = "activeState" AND faction_name ="{0}"  AND date >= {1} AND date <= {2} ORDER BY date DESC'.format(self.name,start_timestamp,end_timestamp)).fetchall()    
+    return states
+  
+  def get_state_history(self, conn,start_timestamp = None, end_timestamp = None):
+    result = self.get_states(conn)
+    return result
+  
+  def get_state(self, conn, start_timestamp = None, end_timestamp = None):
+    result = self.get_states(conn)
+    if isinstance(result[0],sqlite3.Row):
+      result = tuple(result[0])
+    return result
   
   def get_status_in_system(self,system_name, start_timestamp = None, end_timestamp = None):
     if not self.ok:
@@ -612,7 +639,7 @@ class Faction:
     timestamps = defaultdict(dict)
     c.execute('SELECT date,influence FROM faction_system WHERE name = "{0}" AND system = "{1}" AND date >= {2} AND date <= {3}'.format(self.name,system_name,start_timestamp,end_timestamp))
     status_entries =  list(c.fetchall())
-    c.execute('SELECT date,state_name,state_type,trend FROM faction_system_state WHERE faction_name = "{0}" AND system_name = "{1}" AND date >= {2} AND date <= {3}'.format(self.name,system_name,start_timestamp,end_timestamp))
+    c.execute('SELECT date,state_name,state_type,trend FROM faction_state WHERE faction_name = "{0}" AND system_name = "{1}" AND date >= {2} AND date <= {3}'.format(self.name,start_timestamp,end_timestamp))
     state_entries = list(c.fetchall())
     for entry in state_entries:
       timestamp,state_name,state_type,trend = entry
@@ -643,7 +670,7 @@ class System:
     c = conn.cursor()
     c.execute('SELECT name FROM Systems')
     factions = [System(conn,faction[0]) for faction in c.fetchall()]
-    return factions
+    return factions 
   
   def get_closest_systems(self,conn,limit = None):
     if not self.ok:
@@ -692,7 +719,7 @@ class System:
     else:
       start_timestamp = get_time(start_timestamp)
     if end_timestamp == None:
-      end_timestamp = get_last_update(c)
+      end_timestamp =0xFFFFFFFF
     else:
       end_timestamp = get_time(end_timestamp)
     c.execute('SELECT name FROM faction_system WHERE system = "{0}" AND date >= {1} AND date <= {2} AND influence > 0.0'.format(self.name,start_timestamp,end_timestamp))
@@ -989,7 +1016,6 @@ def update_tick2(conn,cur_time = None, local = False, history = False,forced=Fal
           SELECT * FROM faction_system WHERE
           date={0} AND
           name="{1}" AND
-          system="{2}" AND
           influence={3}""".format(*values)
           c.execute(check_query)
           if c.fetchone():
@@ -1015,17 +1041,51 @@ def update_tick2(conn,cur_time = None, local = False, history = False,forced=Fal
         except sqlite3.IntegrityError:
           continue
         
-        if history:  
-          conn.commit()
+      if history:  
+        conn.commit()
   conn.commit()
   return True
  
- 
-conn = sqlite3.connect(DATABASE)
+def default_expansion_filter(conn,systems,target):
+  return [exp_system for exp_system in systems if (exp_system == target) or (len(System(conn,exp_system).get_factions(conn)) < 7)]
 
-#fetch_bubble("Naunin")
-#fetch_bubble("Smethells 1")
-update_tick2(conn,history = True,forced=True)
+def get_next_target(conn,origin,target,expansion_filter=default_expansion_filter):
+  systems = [sys[0] for sys in get_systems()]
+  path = [origin]
+  found = False
+  current = origin
+  systems.remove(origin)
+  while not found:
+    closest = System(conn,current).get_closest_systems(conn)
+    closest_list =  [valid["system"] for valid in closest if valid["system"] not in path]
+    closest_list = expansion_filter(conn, closest_list,target)
+    closest_list = [valid_system for valid_system in closest_list if (valid_system in systems) or (valid_system == target)]
+    current = closest_list[0]
+    if(current == target):
+      path.append(current)
+      found = True
+    else:
+      path.append(current)
+      systems.remove(current)
 
-conn.close()
  
+if not IS_FLASK_ENVIRONMENT:
+  conn = sqlite3.connect(DATABASE)
+  
+  #fetch_bubble("Naunin")
+  #fetch_bubble("Smethells 1")
+  update_tick2(conn)
+  result =[]
+  star_system = System(conn,"Naunin")
+  system_factions = star_system.get_current_factions(conn)
+  for faction in system_factions:
+    f = Faction(conn,faction)
+    if f:
+      state = f.get_state(conn)
+      influence = f.get_current_influence_in_system(conn,star_system)
+      if state and influence:
+        faction_dict = {"name":faction,"state":state,"influence":"{0:.2f}".format(influence*100.0)}
+        result.append(faction_dict)
+  conn.close()
+
+get_days(1527852431,1517745656)

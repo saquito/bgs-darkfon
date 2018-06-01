@@ -1,7 +1,7 @@
 var app_system_info = angular.module('systemInfo', []);
 app_system_info.controller('factionList', function($scope, $http, $templateCache, $templateRequest, $rootScope) {
     $scope.tab_panel="";
-    $scope.submit = function() {
+    $scope.update = function() {
       $http.post("system_factions",$scope.star_system)
         .then(function (response) {
           $scope.factions = response.data;
@@ -17,6 +17,7 @@ app_system_info.controller('factionList', function($scope, $http, $templateCache
         console.log($scope.next_expansion);
       });
     };
+    $scope.submit = $scope.update;
 });
 app_system_info.directive("factionSystemList", function() {
     return {

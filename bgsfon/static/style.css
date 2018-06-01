@@ -84,6 +84,8 @@ form[id=systeminfo] {
 body {
 	color:orange;
 	font-family: "Euro Caps";
+	font-size:12px;
+	background-color:#000000;
 }
 
 li {
@@ -118,14 +120,14 @@ li {
   width: 20em;
   background-color:#ff0000;
   border:solid;
-  border-color:#990000;
+  border-color:#000000;
   bottom: 100%;
 }
 .bsgtool-nav-right {
   display: inline-block;
   vertical-align: top;
   width: 23%;
-  background-color:#ff0000;
+  background-color:#000000;
   border:solid;
   border-color:#990000;
   align:right;
@@ -140,16 +142,16 @@ li {
 }
 
 .bsgtool-container {
-  background-color:#eeeeee;
+  background-color:#000000;
   border:none;
-  border-color:#aaaaaa;
+  border-color:#000000;
   position: relative;
 }
 
 .bsgtool-section {
   background-color:#cccccc;
   border:solid;
-  border-color:#aaaaaa;
+  border-color:#000000;
   margin:1px;
 }
 
@@ -157,31 +159,34 @@ label {font-family: "Euro Caps";color:orange;}
 table { 
   border:solid;
   border-width:1px;
-  border-color:orange;
+  border-color:#ff8040;
   border-collapse: collapse;
   width:100%;
   background-color:#000000;
+  margin:3px;
   }
 table th { 
   border:solid;
   border-width:1px;
-  border-color:#000000;
+  border-color:#ff8040;
   padding:5px;
   background-color: orange;
   color:#ffffff;
   font-family: "Euro Caps";
+  font-size:12px;
   max-height:1em;
   }
 table td {
   border:solid;
   border-width:1px;
-  border-color:orange;
+  border-color:#ff8040;
   padding:5px;
   color:orange;
   font-family: "Euro Caps";
+  font-size:12px;
   width:1%;
   white-space:nowrap;
-  }
+ }
 
 .tab_button { 
   color: white;
@@ -202,11 +207,28 @@ table td {
 	padding:5px;
 }
 
-.left-menu-option {
-	background-color: #550000;
+/*.left-menu-option {
+	background-color: #000000;
 	width:10px;
-}
+}*/
 
 .footer {
 	border:solid;
+}
+
+a {
+	color: #eeee80;
+}
+  
+a:hover {
+  color: #ffff80;
+  text-decoration: none;
+  cursor:pointer;
+}
+
+.table-header {
+	background-color:#fd7d31;
+	color:#ffff80;
+	padding:2px;
+	width:100%;
 }
