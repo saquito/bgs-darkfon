@@ -20,7 +20,7 @@ except:
   pass
 
 EXPANSION_RADIUS = 27.5
-EXPANSION_THRESHOLD = 0.65
+EXPANSION_THRESHOLD = 0.60
 EXPANSION_FACTION_THRESHOLD = 6
 EXPANSION_FACTION_MAX = 7
 RETREAT_THRESHOLD = 0.05
@@ -521,7 +521,7 @@ class Faction:
     c = conn.cursor()
     c.execute('SELECT faction_name FROM Factions{0}'.format(criteria_sql))
     factions = c.fetchall()
-    factions = [Faction(faction[0]) for faction in factions]
+    factions = [Faction(conn,faction[0]) for faction in factions]
     return factions
   
   def get_retreat_risk(self,threshold = RETREAT_THRESHOLD):
@@ -560,11 +560,11 @@ class Faction:
     conn = get_db_connection()
     c = conn.cursor()
     if start_timestamp == None:
-      start_timestamp = get_last_update()
+      start_timestamp = get_last_update(conn)
     else:
       start_timestamp = get_time(start_timestamp)
     if end_timestamp == None:
-      end_timestamp = get_last_update()
+      end_timestamp = get_last_update(conn)
       
     else:
       end_timestamp = get_time(end_timestamp)
@@ -654,18 +654,18 @@ class Faction:
     conn = get_db_connection()
     c = conn.cursor()
     if start_timestamp == None:
-      start_timestamp = get_last_update()
+      start_timestamp = get_last_update(conn)
     else:
       start_timestamp = get_time(start_timestamp)
     if end_timestamp == None:
-      end_timestamp = get_last_update()
+      end_timestamp = get_last_update(conn)
     else:
       end_timestamp = get_time(end_timestamp)
 
     timestamps = defaultdict(dict)
     c.execute('SELECT date,influence FROM faction_system WHERE name = "{0}" AND system = "{1}" AND date >= {2} AND date <= {3}'.format(self.name,system_name,start_timestamp,end_timestamp))
     status_entries =  list(c.fetchall())
-    c.execute('SELECT date,state_name,state_type,trend FROM faction_state WHERE faction_name = "{0}" AND system_name = "{1}" AND date >= {2} AND date <= {3}'.format(self.name,start_timestamp,end_timestamp))
+    c.execute('SELECT date,state_name,state_type,trend FROM faction_state WHERE faction_name = "{0}" AND date >= {1} AND date <= {2}'.format(self.name,start_timestamp,end_timestamp))
     state_entries = list(c.fetchall())
     for entry in state_entries:
       timestamp,state_name,state_type,trend = entry
@@ -777,7 +777,7 @@ def get_factions_with_expansion_risk(threshold = EXPANSION_THRESHOLD):
       for system in risked:
         system_name, influence = system
         if not faction.name.startswith(system_name):
-          ret_risked.append({"faction":faction.name,"system":system_name,"influence":influence, "state":faction.state})
+          ret_risked.append({"faction":faction.name,"system":system_name,"influence":influence, "state":faction.get_state(conn)})
   return ret_risked
 
 def get_trend_text(trend):
@@ -812,11 +812,11 @@ def get_war_risk_report(threshold = WAR_THRESHOLD):
                                                                   faction2.name,faction2.get_current_influence_in_system(system.name)*100.0,system.name)
   return report
 
-def get_expansion_risk_report(threshold = EXPANSION_THRESHOLD):
+def get_expansion_risk_report(conn,threshold = EXPANSION_THRESHOLD):
   report = "\n" + "*"*10 + "EXPANSION RISK REPORT" + "*"*10 + "\n"
   report += "The following factions are in risk of enter in state of Expansion:\n"
   for risk in get_factions_with_expansion_risk(threshold):
-    report += "'{0}' from system '{1}' (Influence: {2:.3g} %, State: {3}, Distance: {4} lys)\n".format(risk['faction'],risk['system'],risk['influence']*100.0,risk['state'], System(risk['system']).distance)
+    report += "'{0}' from system '{1}' (Influence: {2:.3g} %, State: {3}, Distance: {4} lys)\n".format(risk['faction'],risk['system'],risk['influence']*100.0,risk['state'][0][1], System(conn,risk['system']).distance)
   return report
 
 
