@@ -92,7 +92,7 @@ def get_system_factions_static(system_name):
     for faction in system_factions:
       f = bgs.Faction(conn,faction)
       if f:
-        tick,state = f.get_state(conn)
+        tick,state_type,state = f.get_state(conn)
         is_player = True
         if f.is_player:
           is_player = False
