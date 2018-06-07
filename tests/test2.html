@@ -17,5 +17,181 @@ Header
   <span style="width:15%" class="bar-2">15%</span>
   <span style="width:30%" class="bar-3">30%</span>
 </div>
+<canvas id="myCanvas" width="800" height="600" style="border:1px solid #000000;"></canvas>
+
+<script>
+var c = document.getElementById("myCanvas");
+var ctx = c.getContext("2d");
+ctx.font = '10pt Euro Caps'
+
+
+function Graph(name,size){
+	   this.name = name;
+	   this.graphBaseX = 50;
+	   this.graphBaseY = 550;
+	   this.graphAxisXSize = size[0];
+	   this.graphAxisYSize = size[1];
+	   this.graphBarWidth = 0;
+}
+
+Graph.prototype.drawPoint = function (ctx, x, y, style, type, size) {
+	
+	posx=x-size/2;
+	posy=y-size/2;
+	ctx.strokeStyle=style;
+	ctx.lineWidth = 1;
+	ctx.fillStyle=style;
+	if (type == "empty-square")
+	{
+	 ctx.strokeRect(x-size,y-size,size*2,size*2);
+	}
+  else if (type == "square")
+  {
+    ctx.lineWidth = 0;
+    ctx.fillRect(x-size,y-size,size*2,size*2);
+
+  }
+	else if(type == "empty-circle")
+	{
+		ctx.beginPath();
+		ctx.arc(x, y, size, 0, 2*Math.PI);
+		ctx.stroke();
+	}
+
+  else if(type == "circle")
+  {
+    ctx.beginPath();
+    ctx.arc(x, y, size, 0, 2*Math.PI);
+    ctx.fill();
+    ctx.stroke();
+  }
+  else if (type == "empty-diamond")
+  {
+	  ctx.save();
+	  ctx.translate(x,y);
+	  ctx.rotate(Math.PI/4);
+	  ctx.strokeRect(-size,-size,size*2,size*2);
+	  ctx.rotate(-Math.PI/4);
+	  ctx.restore();
+  }
+  else if (type == "diamond")
+  {
+      ctx.save();	  
+	    ctx.translate(x,y);
+	    ctx.rotate(Math.PI/4);
+	    ctx.fillRect(-size,-size,size*2,size*2);
+	    ctx.restore();
+  }		
+}
+
+Graph.prototype.drawAxes = function (axisXData,axisYData,scaleSizeX,scaleSizeY) {
+	ctx.moveTo(this.graphBaseX,this.graphBaseY);
+	ctx.strokeStyle="black";
+  ctx.lineWidth = 1;
+  ctx.fillStyle="black";
+  ctx.strokeRect(this.graphBaseX,this.graphBaseY,3,1);
+	ctx.lineTo(this.graphBaseX+this.graphAxisXSize,this.graphBaseY);
+	ctx.moveTo(this.graphBaseX,this.graphBaseY);
+	ctx.lineTo(this.graphBaseX,this.graphBaseY-this.graphAxisYSize);
+	ctx.stroke();
+	ctx.moveTo(this.graphBaseX,this.graphBaseY);
+	
+	this.scaleSizeX = scaleSizeX || 0;
+	this.scaleSizeY = scaleSizeY || 0;
+	if (this.scaleSizeX == 0)
+	{
+		  this.scaleSizeX = this.graphAxisXSize/(axisXData.length - 1);
+	}
+	if (this.scaleSizeY == 0)
+	{
+		  this.scaleSizeY = this.graphAxisYSize/(axisYData.length - 1);
+	}
+	posx = this.graphBaseX;
+	dataPosX = 0;
+	while ((posx <= this.graphBaseX+this.graphAxisXSize ) && (dataPosX < axisXData.length))
+	{
+		ctx.moveTo(posx,this.graphBaseY-5);
+		ctx.lineTo(posx,this.graphBaseY+5);
+		ctx.stroke();
+		centerText=ctx.measureText(axisXData[dataPosX]).width/2;
+		ctx.strokeText(axisXData[dataPosX],posx - centerText,this.graphBaseY+15);
+		posx+=this.scaleSizeX;
+		dataPosX++;
+	}
+	ctx.moveTo(this.graphBaseX,this.graphBaseY);
+	posy = this.graphBaseY - this.scaleSizeY;
+	dataPosY = 0;
+	while ((posy >= this.graphBaseY-this.graphAxisYSize ) && (dataPosY < axisYData.length))
+	 {
+		ctx.moveTo(this.graphBaseX-5,posy);
+		ctx.lineTo(this.graphBaseX+5,posy);
+		ctx.stroke();
+		textWidth=ctx.measureText(axisYData[dataPosY]).width;
+		textHeight=5;
+	  ctx.strokeText(axisYData[dataPosY],this.graphBaseX - textWidth - 15 ,posy + textHeight/2);
+		posy-=this.scaleSizeY;
+		dataPosY++;
+	 }
+}
+
+Graph.prototype.drawBar = function (ctx, datapos, value, color, width) {
+	  this.graphBarWidth = width || 0;
+    ctx.beginPath();
+    ctx.fillStyle=color;
+    if (this.graphBarWidth == 0)
+    {
+    	this.graphBarWidth = this.scaleSizeX/2;
+    }
+    posx = this.graphBaseX + datapos*this.scaleSizeX - this.graphBarWidth/2;
+    ctx.fillRect(posx,this.graphBaseY,this.graphBarWidth,-value*this.scaleSizeY);
+    ctx.stroke();
+}
+
+function ScaledGraph(name,size,scaleX,scaleY,maxX,maxY)
+{
+  this.graph = new Graph(name,size);
+  this.scaleX = scaleX;
+  this.scaleY = scaleY;
+  this.maxX = maxX;
+  this.maxY = maxY;
+}
+
+ScaledGraph.prototype.drawAxes = function() {
+	  stepsX = [];
+	  posX = 0
+	  while (posX <= this.maxX)
+		{
+		  stepsX.push(posX);
+		}
+	  posX += this.scaleX;
+	  stepsY = [];
+    posY = 0
+    while (posY <= this.maxY)
+    {
+      stepsY.push(posY);
+    }
+    posY += this.scaleY;
+    this.graph.drawAxes(stepsX,stepsY);
+}
+
+ScaledGraph.prototype.drawLineProgression = function(name,data) {
+	 
+}
+
+var graph = new ScaledGraph("MyGraph",[600,600],10,10,100,100);
+var data = [["TATA",10],["TETE",20]];
+var xData=["TATA","TETE","TITI","TOTO","TUTU"];
+var yData=[10,20,30,40,50,60];
+graph.drawAxes(xData,yData);
+graph.graph.drawBar(ctx, 1,1,"#FF9707");
+graph.graph.drawBar(ctx, 2,3,"#07FF97");
+graph.graph.drawBar(ctx, 3,2,"#9707FF");
+graph.graph.drawPoint(ctx,20,50,"#FF0000","circle",3);
+graph.graph.drawPoint(ctx,40,50,"#777700","empty-circle",3);
+graph.graph.drawPoint(ctx,60,50,"#00FF00","square",3);
+graph.graph.drawPoint(ctx,80,50,"#007777","empty-square",3);
+graph.graph.drawPoint(ctx,100,50,"#0000FF","diamond",3);
+graph.graph.drawPoint(ctx,120,50,"#F0000F","empty-diamond",3);
+</script>
 </body>
 </html>
