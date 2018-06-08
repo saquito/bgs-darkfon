@@ -1,0 +1,65 @@
+<div class="chart-container" style="position: absolute; max-height:20px; max-width:80vw">
+<canvas id="speedChart"></canvas>
+</div>
+<script>
+var speedCanvas = document.getElementById("speedChart");
+
+Chart.defaults.global.defaultFontFamily = "Euro Caps";
+Chart.defaults.global.defaultFontSize = 11;
+
+var dataFirst = {
+    label: "Naunin Jet Netcomms",
+    data: [0, 59, 75, 20, 20, 55, 40],
+    lineTension: 0.3,
+    fill: false,
+    color:'orange',
+    borderColor: 'red',
+    backgroundColor: 'transparent',
+    pointBorderColor: 'red',
+    pointBackgroundColor: 'lightgreen',
+    pointRadius: 5,
+    pointHoverRadius: 5,
+    pointHitRadius:10,
+    pointBorderWidth: 2,
+    pointStyle: 'rect'
+  };
+
+var dataSecond = {
+    label: "Fathers of Nontime",
+    data: [20, 15, 60, 60, 65, 30, 70],
+    lineTension: 0.3,
+    fill: false,
+    borderColor: 'purple',
+    backgroundColor: '#ffffff10',
+    pointBorderColor: 'purple',
+    pointBackgroundColor: 'lightgreen',
+    pointRadius: 5,
+    pointHoverRadius: 5,
+    pointHitRadius: 10,
+    pointBorderWidth: 2
+  };
+
+var speedData = {
+  labels: ["0s", "10s", "20s", "30s", "40s", "50s", "60s"],
+  datasets: [dataFirst, dataSecond]
+};
+
+var chartOptions = {
+  legend: {
+    display: true,
+    position: 'top',
+    labels: {
+      boxWidth: 80,
+      fontColor: 'orange'
+    },
+    maintainAspectRatio:false
+  }
+};
+
+var lineChart = new Chart(speedCanvas, {
+  type: 'line',
+  data: speedData,
+  options: chartOptions
+});
+
+</script>

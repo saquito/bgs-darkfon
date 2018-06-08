@@ -56,7 +56,7 @@ def get_system_view(system_name):
     response += "<td>{0}</td>".format("Yes" if near_system["has_player"] else "No")
     response +="</tr>"
   response +="</table>"
-
+  response += render_template('query/influence_graph.html')
   response += render_template('query/system_view_end.html')
   return response
 

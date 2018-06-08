@@ -1,0 +1,38 @@
+<html>
+<head>
+  <title>Main Test - BGS Tool</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap.css') }}">
+  <script src="{{ url_for('static', filename='jquery.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='bootstrap.js') }}"></script>
+  <script src="{{ url_for('static', filename='angular.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='Chart.bundle.js') }}"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="bsgtool-container">
+  <nav id="span-tab-buttons" class="bsgtool-nav-left">
+  </nav>
+  <div class="bsgtool-column">
+    <ul class="nav nav-pills">
+      <li class="active"><a data-toggle="pill" href="#home">Home</a></li>
+      <li><a data-toggle="pill" href="#system">System</a></li>
+        <li><a data-toggle="pill" href="#reports">Reports</a></li>
+      <li><a data-toggle="pill" href="#activities">Activities</a></li>
+      <li><a data-toggle="pill" href="#tools">Tools</a></li>
+    </ul>
+  </div>
+</div>
+<div class="bsgtool-container">
+  <nav class="bsgtool-nav-left">
+    <ul class="nav flex-column">
+      <li class="active"><a data-toggle="pill" href="#home">Home</a></li>
+      <li><a href="summary" class="left-menu-option">Summary</a></li>
+      <li><a href="bubble" class="left-menu-option">Bubble</a></li>
+      <li><a href="main_test" class="left-menu-option">Systems</a></li>
+      <li><a  href="factions" class="left-menu-option">Factions</a></li>
+      <li><a  href="settings" class="left-menu-option">Settings</a></li>
+    </ul>
+  </nav>
+  <div class="bsgtool-column">
