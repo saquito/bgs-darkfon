@@ -97,7 +97,7 @@ def get_system_factions_static(system_name):
         if f.is_player:
           is_player = False
         influence = f.get_current_influence_in_system(conn,star_system)
-        print("INFLUENCE:",influence)
+        print(faction,"INFLUENCE:",influence)
         if tick:
           tick = bgs.get_utc_time_from_epoch(tick)
         if state and influence:
@@ -162,6 +162,11 @@ def main_test2(system_name):
 def get_near_systems_list():
   return render_template('query/near_systems_list.html')
 
+@bp.route('/update_tick', methods=('GET', 'POST'))
+def update_tick():
+  conn = db.get_db()
+  bgs.update_tick2(conn,forced=True)
+  return ""
 
 @bp.route('/faction_system_list', methods=('GET', 'POST'))
 def get_faction_system_list():

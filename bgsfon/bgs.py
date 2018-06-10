@@ -19,6 +19,20 @@ try:
 except:
   pass
 
+state_params = dict()
+#Preparation, Min-Length, Max-Length, Cooldown
+
+state_params['Expansion'] = [5,3,5,2]
+state_params['War'] = [3,3,28,0]
+state_params['Civil War'] = [3,3,28,0]
+state_params['Election'] = [3,3,5,2]
+state_params['Boom'] = [2,3,28,3]
+state_params['Bust'] = [2,3,28,3]
+state_params['Civil Unrest'] = [1,3,7,3]
+state_params['Famine'] = [3,3,28,25]
+state_params['Outbreak'] = [4,3,28,7]
+state_params['Lockdown'] = [1,3,14,1]
+
 EXPANSION_RADIUS = 27.5
 EXPANSION_THRESHOLD = 0.60
 EXPANSION_FACTION_THRESHOLD = 6
@@ -30,7 +44,7 @@ TIME_FORMAT = '%d-%m-%Y %H:%M:%S'
 DATE_FORMAT = '%Y-%m-%d'
 DEBUG_LEVEL = 0
 LOCAL_JSON_PATH = "LOCAL_JSON"
-DATABASE = "bgs-data-rework.sqlite3"
+DATABASE = "bgs-data.sqlite3"
 FACTION_CONTROLLED = "Fathers of Nontime"
 conn = None
 
@@ -578,7 +592,7 @@ class Faction:
     if isinstance(system_requested,System):
       system_requested = system_requested.name
     c = conn.cursor()
-    c.execute('SELECT influence FROM faction_system WHERE system = "{0}" AND name = "{1}" ORDER BY date'.format(system_requested,self.name,get_last_update(c)))  
+    c.execute('SELECT influence FROM faction_system WHERE system = "{0}" AND name = "{1}" ORDER BY date DESC'.format(system_requested,self.name,get_last_update(c)))  
     influence_data = c.fetchone()
     if influence_data and len(influence_data) > 0: 
       return influence_data[0]
@@ -1100,7 +1114,7 @@ def get_next_target(conn,origin,target,expansion_filter=default_expansion_filter
       systems.remove(current)
   return path
 
-if 1:
+if 0:
   if not IS_FLASK_ENVIRONMENT:
     conn = sqlite3.connect(DATABASE)
     print(get_next_target(conn,"Naunin", "Belanit"))
@@ -1109,7 +1123,6 @@ if 1:
 
 if not IS_FLASK_ENVIRONMENT:
   conn = sqlite3.connect(DATABASE)
-  
   #fetch_bubble("Naunin")
   #fetch_bubble("Smethells 1")
   #clean_updates()
@@ -1135,5 +1148,6 @@ if not IS_FLASK_ENVIRONMENT:
     print(get_date_from_epoch(timestamp),influence)
   for timestamp, state_type, state in g.get_states(conn,state_type="activeState", start_timestamp=0):
     print(get_date_from_epoch(timestamp),state,state_type)
+  print(get_expansion_risk_report(conn))
   conn.close()
 
